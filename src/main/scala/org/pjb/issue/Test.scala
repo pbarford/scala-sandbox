@@ -68,7 +68,7 @@ object Test extends App {
         m
       }
       val eitherF = b.add(new EitherFanOut[Message, Message])
-      val merge: UniformFanInShape[Message, Message]  = b.add(Merge[Message](2))
+      val mergeF: UniformFanInShape[Message, Message]  = b.add(Merge[Message](2))
       val pubF: Flow[Message, Message, NotUsed] = Flow[Message].mapAsync(1) {
         msg => publisher.publishConfirm(msg).map {
           ps =>
@@ -78,13 +78,13 @@ object Test extends App {
       }
 
       import GraphDSL.Implicits._
-      eitherF.out0 ~> invalidF ~> merge.in(0)
-      eitherF.out1 ~> pubF ~> merge.in(1)
-      FlowShape(eitherF.in, merge.out)
+      eitherF.out0 ~> invalidF ~> mergeF.in(0)
+      eitherF.out1 ~> pubF ~> mergeF.in(1)
+      FlowShape(eitherF.in, mergeF.out)
     }.named("partial-flow")
 
     GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
-      val transF: Flow[CommittableMessage[String,Array[Byte]], Either[Message, Message], NotUsed] = Flow[CommittableMessage[String,Array[Byte]]].map(translate2)
+      val transF: Flow[CommittableMessage[String,Array[Byte]], Either[Message, Message], NotUsed] = Flow[CommittableMessage[String,Array[Byte]]].map(translate)
       builder.add(transF.via(partial))
     }
   }
@@ -96,7 +96,7 @@ object Test extends App {
       println(s"Thread[${Thread.currentThread().getName}] NOT PUBLISHED committing partition[$part] offset[$off]")
   }
 
-  def translate2: CommittableMessage[String, Array[Byte]] => Either[Message, Message] = {
+  def translate: CommittableMessage[String, Array[Byte]] => Either[Message, Message] = {
     msg =>
       val s = new String(msg.record.value())
       if(Integer.valueOf(s) % 2 == 0)
