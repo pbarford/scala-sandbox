@@ -62,13 +62,13 @@ object Test extends App {
     .run()
 
   def theFlow: Graph[FlowShape[CommittableMessage[String, Array[Byte]], Message], NotUsed] = {
-    val partial: Graph[FlowShape[Either[Message, Message], Message], NotUsed] = GraphDSL.create() { implicit b =>
+    val partial = GraphDSL.create() { implicit builder =>
       val invalidF: Flow[Message, Message, NotUsed] = Flow[Message].map { m =>
         println(s"Thread[${Thread.currentThread().getName}] invalid [${m.value}] committing partition[${m.commitable.record.partition()}] offset[${m.commitable.record.offset()}]")
         m
       }
-      val eitherF = b.add(new EitherFanOut[Message, Message])
-      val mergeF: UniformFanInShape[Message, Message]  = b.add(Merge[Message](2))
+      val eitherF = builder.add(new EitherFanOut[Message, Message])
+      val mergeF: UniformFanInShape[Message, Message]  = builder.add(Merge[Message](2))
       val pubF: Flow[Message, Message, NotUsed] = Flow[Message].mapAsync(1) {
         msg => publisher.publishConfirm(msg).map {
           ps =>
@@ -83,7 +83,7 @@ object Test extends App {
       FlowShape(eitherF.in, mergeF.out)
     }.named("partial-flow")
 
-    GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+    GraphDSL.create() { implicit builder =>
       val transF: Flow[CommittableMessage[String,Array[Byte]], Either[Message, Message], NotUsed] = Flow[CommittableMessage[String,Array[Byte]]].map(translate)
       builder.add(transF.via(partial))
     }
