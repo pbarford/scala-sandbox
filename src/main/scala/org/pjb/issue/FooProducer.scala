@@ -21,7 +21,7 @@ object FooProducer extends App {
       .withProperty("partitioner.class", "org.pjb.streams.MyPartitioner")
       .withBootstrapServers(kafkaServers)
 
-  Source(1 to 1000)
+  Source(1 to 20000)
     .map(i => s"$i")
     .map(value => new ProducerRecord[Integer, String]("Foo", Integer.valueOf(value.hashCode), value))
     .map{m => println(m); m}

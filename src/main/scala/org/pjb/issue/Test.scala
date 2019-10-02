@@ -6,13 +6,14 @@ import akka.kafka.ConsumerMessage.CommittableMessage
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.kafka.{CommitterSettings, ConsumerSettings, Subscriptions}
-import akka.stream.scaladsl.{Flow, GraphDSL, Keep, Sink}
-import akka.stream.{ActorMaterializer, FlowShape, Graph}
+import akka.stream.scaladsl.{Flow, GraphDSL, Keep, Merge, Sink}
+import akka.stream.{ActorMaterializer, FlowShape, Graph, UniformFanInShape}
 import com.rabbitmq.client.ConnectionFactory
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
 import org.pjb.issue.rmq.Publisher
 import org.pjb.issue.rmq.Publisher.{NotPublished, PublishStatus, Published}
+import org.pjb.issue.streams.EitherFanOut
 
 object Test extends App {
 
@@ -61,8 +62,13 @@ object Test extends App {
     .run()
 
   def theFlow: Graph[FlowShape[CommittableMessage[String, Array[Byte]], Message], NotUsed] = {
-    GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
-      val transF: Flow[CommittableMessage[String,Array[Byte]], Message, NotUsed] = Flow[CommittableMessage[String,Array[Byte]]].map(translate)
+    val partial: Graph[FlowShape[Either[Message, Message], Message], NotUsed] = GraphDSL.create() { implicit b =>
+      val invalidF: Flow[Message, Message, NotUsed] = Flow[Message].map { m =>
+        println(s"Thread[${Thread.currentThread().getName}] invalid [${m.value}] committing partition[${m.commitable.record.partition()}] offset[${m.commitable.record.offset()}]")
+        m
+      }
+      val eitherF = b.add(new EitherFanOut[Message, Message])
+      val merge: UniformFanInShape[Message, Message]  = b.add(Merge[Message](2))
       val pubF: Flow[Message, Message, NotUsed] = Flow[Message].mapAsync(1) {
         msg => publisher.publishConfirm(msg).map {
           ps =>
@@ -70,7 +76,16 @@ object Test extends App {
             msg
         }
       }
-      builder.add(transF.via(pubF))
+
+      import GraphDSL.Implicits._
+      eitherF.out0 ~> invalidF ~> merge.in(0)
+      eitherF.out1 ~> pubF ~> merge.in(1)
+      FlowShape(eitherF.in, merge.out)
+    }.named("partial-flow")
+
+    GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+      val transF: Flow[CommittableMessage[String,Array[Byte]], Either[Message, Message], NotUsed] = Flow[CommittableMessage[String,Array[Byte]]].map(translate2)
+      builder.add(transF.via(partial))
     }
   }
 
@@ -81,9 +96,12 @@ object Test extends App {
       println(s"Thread[${Thread.currentThread().getName}] NOT PUBLISHED committing partition[$part] offset[$off]")
   }
 
-  def translate: CommittableMessage[String, Array[Byte]] => Message = {
+  def translate2: CommittableMessage[String, Array[Byte]] => Either[Message, Message] = {
     msg =>
       val s = new String(msg.record.value())
-      Message(s, msg)
+      if(Integer.valueOf(s) % 2 == 0)
+        Right(Message(s, msg))
+      else
+        Left(Message(s, msg))
   }
 }
