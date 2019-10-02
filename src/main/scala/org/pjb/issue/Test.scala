@@ -84,7 +84,7 @@ object Test extends App {
     }.named("partial-flow")
 
     GraphDSL.create() { implicit builder =>
-      val transF: Flow[CommittableMessage[String,Array[Byte]], Either[Message, Message], NotUsed] = Flow[CommittableMessage[String,Array[Byte]]].map(translate)
+      val transF = Flow[CommittableMessage[String,Array[Byte]]].map(translate)
       builder.add(transF.via(partial))
     }
   }
