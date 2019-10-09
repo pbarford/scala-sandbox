@@ -17,6 +17,17 @@ import org.pjb.issue.streams.EitherFanOut
 
 object Test extends App {
 
+  /*
+                                    invalid Flow
+                                   /            \
+                                  / (L)          \
+  source -> translate -> either ->                -> merge -> commit offset
+                                  \ (R)          /
+                                   \            /
+                                    publish Flow
+  
+   */
+
   implicit val system = ActorSystem.create("kafkaConsumer")
   implicit val executionContext = system.dispatcher
   implicit val materializer = ActorMaterializer()
