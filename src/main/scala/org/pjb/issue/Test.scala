@@ -21,11 +21,11 @@ object Test extends App {
                                     invalid Flow
                                    /            \
                                   / (L)          \
-  source -> translate -> either ->                -> merge -> commit offset
+  source -> translate -> either ->                -> merge -> commit-sink
                                   \ (R)          /
                                    \            /
                                     publish Flow
-  
+
    */
 
   implicit val system = ActorSystem.create("kafkaConsumer")
