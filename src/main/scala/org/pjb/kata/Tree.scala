@@ -90,7 +90,8 @@ object Tree extends App {
               val nnbl = nodeB.left match {
                 case Some(leftChildNodeB) =>
                   //println(s"[${self.value}] leftChildNodeB.rotateLeft ${leftChildNodeB.value}")
-                  Some(leftChildNodeB.rotateLeft)
+                  //Some(leftChildNodeB.rotateLeft)
+                  Some(leftChildNodeB)
                 case None => None
               }
               nodeB.copy(right = Some(nna), left = nnbl)
@@ -113,7 +114,8 @@ object Tree extends App {
               val nnb = nodeB.right match {
                 case Some(rightChildNodeB) =>
                   //println(s"[${self.value}] rightChildNodeB.rotateRight ${rightChildNodeB.value}")
-                  Some(rightChildNodeB.rotateRight)
+                  //Some(rightChildNodeB.rotateRight)
+                  Some(rightChildNodeB)
                 case None => None
               }
               nodeB.copy(left = Some(nna), right = nnb)

@@ -8,29 +8,31 @@ import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.kafka.{CommitterSettings, ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.{Flow, GraphDSL, Keep, Merge, Sink}
 import akka.stream.{ActorMaterializer, FlowShape, Graph, UniformFanInShape}
-import com.rabbitmq.client.ConnectionFactory
+import com.rabbitmq.client.{Channel, Connection, ConnectionFactory}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
 import org.pjb.issue.rmq.Publisher
 import org.pjb.issue.rmq.Publisher.{NotPublished, PublishStatus, Published}
 import org.pjb.issue.streams.EitherFanOut
 
+import scala.concurrent.ExecutionContextExecutor
+
 object Test extends App {
 
   /*
-                                    invalid Flow
-                                   /            \
-                                  / (L)          \
-  source -> translate -> either ->                -> merge -> commit-sink
-                                  \ (R)          /
-                                   \            /
-                                    publish Flow
+                                                   invalid Flow
+                                                  /            \
+                                                 / (L)          \
+  source-per-partition -> translate -> either ->                  -> merge -> commit-sink
+                                                 \ (R)          /
+                                                  \            /
+                                                   publish Flow
 
    */
 
-  implicit val system = ActorSystem.create("kafkaConsumer")
-  implicit val executionContext = system.dispatcher
-  implicit val materializer = ActorMaterializer()
+  implicit val system: ActorSystem = ActorSystem.create("kafkaConsumer")
+  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
   val kafkaServers = "127.0.0.1:9092"
 
   val consumerConfig = system.settings.config.getConfig("akka.kafka.consumer")
@@ -47,8 +49,8 @@ object Test extends App {
     cf.setPort(5672)
     cf
   }
-  val connection = connectionFactory.newConnection()
-  implicit val channel = connection.createChannel()
+  val connection: Connection = connectionFactory.newConnection()
+  implicit val channel: Channel = connection.createChannel()
   val publisher: Publisher = new Publisher()
 
   val consumerSettings = ConsumerSettings(consumerConfig, new StringDeserializer, new ByteArrayDeserializer)
