@@ -3,7 +3,7 @@ package org.pjb.actors
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import akka.persistence.typed.scaladsl.EventSourcedBehavior.CommandHandler
 
 object PTypedActor {
@@ -43,6 +43,10 @@ object PTypedActor {
         emptyState = State(0, ""),
         commandHandler(context),
         eventHandler = (state, event) => state.apply(context, event))
+        .snapshotWhen {
+          case (State(_,_), DataPersisted(_), _) => true
+        }
+        .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 2, keepNSnapshots = 1))
     }
 
   }
