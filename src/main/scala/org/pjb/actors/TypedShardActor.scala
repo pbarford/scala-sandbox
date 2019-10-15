@@ -1,0 +1,53 @@
+package org.pjb.actors
+
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.scaladsl.EventSourcedBehavior.CommandHandler
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
+
+object TypedShardActor {
+
+  sealed trait Command
+  case class UpdateData(data:String) extends TypedShardActor.Command
+  case class GetState(replyTo: ActorRef[State]) extends TypedShardActor.Command
+
+  sealed trait Event
+  case class DataPersisted(data:String) extends TypedShardActor.Event
+
+  case class State(version:Int, data:String) {
+    def apply : (ActorContext[Command], TypedShardActor.Event) => TypedShardActor.State = {
+      case (c, p:TypedShardActor.DataPersisted) =>
+        val u = copy(data = p.data, version = this.version + 1)
+        c.log.info(s"APPLY : $u")
+        u
+    }
+  }
+
+  private def commandHandler(context:ActorContext[TypedShardActor.Command]): CommandHandler[Command, Event, State] = { (state, cmd) =>
+    cmd match {
+      case u:UpdateData =>
+        context.log.info(s"$u")
+        Effect.persist(DataPersisted(u.data))
+      case GetState(replyTo) =>
+        replyTo ! state
+        Effect.none
+    }
+  }
+
+
+  def behavior(id: String): Behavior[Command] = {
+    Behaviors.setup { context =>
+      EventSourcedBehavior[Command, Event, State](
+        persistenceId = PersistenceId(id),
+        emptyState = State(0, ""),
+        commandHandler(context),
+        eventHandler = (state, event) => state.apply(context, event))
+        .snapshotWhen {
+          case (State(_,_), DataPersisted(_), _) => true
+        }
+        .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 2, keepNSnapshots = 1))
+    }
+
+  }
+}

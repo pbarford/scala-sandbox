@@ -10,16 +10,16 @@ import scala.concurrent.duration._
 object PTypedActorTest extends App {
 
   import akka.actor.typed.scaladsl.AskPattern._
-  val s = ActorSystem[PTypedActor.Command](PTypedActor.behavior("id"), "ptyped-actor")
+  val system = ActorSystem[PTypedActor.Command](PTypedActor.behavior("id"), "actorSystem")
 
-  s ! PTypedActor.UpdateData("TESTING")
-  s ! PTypedActor.UpdateData("TESTING")
-  s ! PTypedActor.UpdateData("TESTING")
+  system ! PTypedActor.UpdateData("TESTING")
+  system ! PTypedActor.UpdateData("TESTING")
+  system ! PTypedActor.UpdateData("TESTING")
 
   implicit val timeout: Timeout = 3.seconds
-  implicit val scheduler = s.scheduler
-  implicit val ec = s.executionContext
-  val result: Future[PTypedActor.State] = s.ask(ref => PTypedActor.GetState(ref))
+  implicit val scheduler = system.scheduler
+  implicit val ec = system.executionContext
+  val result: Future[PTypedActor.State] = system.ask(ref => PTypedActor.GetState(ref))
   result.onComplete {
     case Success(r) => println(r)
     case Failure(ex) => println(ex.getMessage)

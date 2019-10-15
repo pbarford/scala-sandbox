@@ -11,16 +11,16 @@ import scala.util.{Failure, Success}
 object TypedActorTest extends App {
 
   import akka.actor.typed.scaladsl.AskPattern._
-  val s = ActorSystem[TypedActor.Protocol](TypedActor.behavior, "typed-actor")
+  val system = ActorSystem[TypedActor.Protocol](TypedActor.behavior, "actorSystem")
 
-  s ! TypedActor.UpdateData("TESTING")
-  s ! TypedActor.UpdateData("TESTING")
-  s ! TypedActor.UpdateData("TESTING")
+  system ! TypedActor.UpdateData("TESTING")
+  system ! TypedActor.UpdateData("TESTING")
+  system ! TypedActor.UpdateData("TESTING")
 
   implicit val timeout: Timeout = 3.seconds
-  implicit val scheduler = s.scheduler
-  implicit val ec = s.executionContext
-  val result: Future[TypedActor.State] = s.ask(ref => GetState(ref))
+  implicit val scheduler = system.scheduler
+  implicit val ec = system.executionContext
+  val result: Future[TypedActor.State] = system.ask(ref => GetState(ref))
   result.onComplete {
     case Success(r) => println(r)
     case Failure(ex) => println(ex.getMessage)

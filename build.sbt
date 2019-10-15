@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor-typed" % "2.5.23",
   "com.typesafe.akka" %% "akka-persistence-typed" % "2.5.23",
   "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.99",
+  "com.typesafe.akka" %% "akka-cluster-sharding-typed" % "2.5.23",
   "com.typesafe.akka" %% "akka-stream-kafka" % "1.0.4",
   "com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "1.1.1",
