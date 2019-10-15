@@ -39,7 +39,7 @@ object PTypedActor {
   def behavior(id: String): Behavior[Command] = {
     Behaviors.setup { context =>
       EventSourcedBehavior[Command, Event, State](
-        persistenceId = PersistenceId(id),
+        persistenceId = PersistenceId(s"ptypedactor-$id"),
         emptyState = State(0, ""),
         commandHandler(context),
         eventHandler = (state, event) => state.apply(context, event))
