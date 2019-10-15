@@ -19,7 +19,7 @@ object PTypedActor {
     def apply : (ActorContext[Command], PTypedActor.Event) => PTypedActor.State = {
       case (c, p:PTypedActor.DataPersisted) =>
         val u = copy(data = p.data, version = this.version + 1)
-        c.log.info(s"APPLY : $u")
+        c.log.info(s"APPLY [${c.self.path.name}] : $u")
         u
 
     }
