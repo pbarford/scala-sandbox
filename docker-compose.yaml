@@ -35,3 +35,17 @@ rabbitmq:
     - "$PWD/docker/rabbitmq/rabbit_enabled_plugins:/etc/rabbitmq/enabled_plugins"
     - "$PWD/docker/rabbitmq/data/config/rabbitmq.config:/etc/rabbitmq/rabbitmq.config"
     - "$PWD/docker/rabbitmq/data/config/definitions.json:/etc/rabbitmq/definitions.json"
+
+cassandra:
+  build: docker/cassandra
+  hostname: cassandra
+  command: /bin/sh -c "cassandra-singlenode;while true; do sleep 5; done"
+  ports:
+    - "7199:7199"
+    - "7000:7000"
+    - "7001:7001"
+    - "9160:9160"
+    - "9042:9042"
+    - "25:22"
+    - "8012:8012"
+    - "61621:61621"
